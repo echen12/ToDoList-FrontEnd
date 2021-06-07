@@ -1,0 +1,19 @@
+{
+  "project": [
+    {
+      "projectName": "first project",
+      "id": 1,
+      "drinkwater": "drink water"
+    },
+    {
+      "projectName": "second project",
+      "id": 2
+    },
+    {
+      "projectName": "third project",
+      "id": 3,
+      "dosomethingelse": "do something else",
+      "idontcarewhatitis": "i dont care what it is"
+    }
+  ]
+}
