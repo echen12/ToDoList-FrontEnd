@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import AddProject from "./components/AddProject"
+import ProjectDisplay from "./components/ProjectDisplay"
+import TaskLengthTitle from "./components/TaskLengthTitle"
+import AddTask from "./components/AddTask"
+import TaskDisplay from "./components/TaskDisplay"
+import { getProject } from "./services/projects"
+
 
 const App = () => {
   const [projectName, setProjectName] = useState("")
@@ -12,16 +19,15 @@ const App = () => {
 
   const hook = () => {
     //console.log('effect')
-    axios
-      .get('http://localhost:3001/project')
+    // axios
+    //   .get('http://localhost:3001/api/projects')
+    getProject()
       .then(response => {
         //console.log('promise fulfilled')
         setProject(response.data)
       })
   }
-
   useEffect(hook, [])
-
 
   const handleProjectName = (e) => {
     //console.log(e.target.value)
@@ -30,10 +36,10 @@ const App = () => {
 
   const getIdAndTitle = (e) => {
     const tempProject = project.filter(p => p.id === Number(e.target.id))
-    const keyLength = Object.keys(tempProject[0]).filter(p => p !== "id" && p !== "projectName").length
-    setTaskLength(keyLength)
+    //console.log(tempProject[0].projects)
+    setTaskLength(tempProject[0].projects.length)
     setProjectTitle(tempProject[0].projectName)
-    setFilterProject(tempProject)
+    setFilterProject(tempProject[0].projects)
     setProjectId(e.target.id)
   }
 
@@ -45,17 +51,18 @@ const App = () => {
   const addTaskName = (e) => {
     //console.log(e.target.value)
     e.preventDefault()
-    const filterArr = project.filter(p => p.id === Number(projectId))
-    const tempObject = filterArr[0]
-    const keys = Object.keys(tempObject)
-    const keyLength = keys.filter(p => p !== "id" && p !== "projectName").length
-    //console.log(keyLength)
-    //console.log(keys)
+    const projectIdentify = project.filter(p => p.id === Number(projectId))
+    //console.log(projectIdentify)
+    const asArray = Object.entries(projectIdentify[0])
+    const withoutProjects = asArray.filter(([key, value]) => key !== "projects")
+    //console.log(withoutProjects)
+    const backToObject = Object.fromEntries(withoutProjects)
+
     let empty = false
     let contains = false
 
-    for (let i = 0; i < keys.length; i++) {
-      if (filterArr[0][keys[i]] === taskName) {
+    for (let i = 0; i < projectIdentify[0].projects.length; i++) {
+      if (projectIdentify[0].projects[i].task === taskName) {
         alert("This task has already been entered!")
         contains = true;
         break;
@@ -68,15 +75,16 @@ const App = () => {
     }
 
     if (!empty && !contains) {
-      filterArr[0][taskName.split(" ").join("")] = taskName
+      backToObject["task"] = taskName
+      projectIdentify[0].projects.push({ task: taskName })
+      //console.log(backToObject)
+
       axios
-        .put(`http://localhost:3001/project/${projectId}`, filterArr[0])
+        .put(`http://localhost:3001/api/projects/${projectId}`, backToObject)
         .then(response => {
           //console.log(response)
-          const keys = Object.keys(tempObject)
-          const keyLength = keys.filter(p => p !== "id" && p !== "projectName").length
-          setTaskLength(keyLength)
-          setFilterProject(filterArr)
+          setTaskLength(projectIdentify[0].projects.length)
+          setFilterProject(projectIdentify[0].projects)
         })
     }
 
@@ -85,35 +93,32 @@ const App = () => {
   }
 
   const deleteTask = (e) => {
-    //console.log(e.target.id)
-    const keys = Object.keys(filterProject[0]).filter(p => p !== e.target.id)
-    const findIndex = project.findIndex(p => p.id === Number(projectId))
-    const keyLength = keys.filter(p => p !== "id" && p !== "projectName").length
-    setTaskLength(keyLength)
-    //console.log(findIndex)
-
-    const tempObject = {}
-    for (let i = 0; i < keys.length; i++) {
-      tempObject[keys[i]] = filterProject[0][keys[i]]
-    }
+    const deleteObj = { task: e.target.id }
+    const currentProject = project.filter(p => p.id === Number(projectId))
+    const remainingTasks = currentProject[0].projects.filter(p => p.task !== e.target.id)
+    const currentIndex = project.findIndex(p => p.id === Number(projectId))
 
     axios
-      .put(`http://localhost:3001/project/${projectId}`, tempObject)
+      .put(`http://localhost:3001/api/projects/${projectId}`, deleteObj)
       .then(response => {
         //console.log(response)
-        project[findIndex] = tempObject
-        setFilterProject([tempObject])
+        const tempArr = [...project]
+        tempArr[currentIndex].projects = remainingTasks
+        setProject(tempArr)
+        setFilterProject(remainingTasks)
+        setTaskLength(remainingTasks.length)
       })
-
   }
 
   const deleteProject = (e) => {
     //console.log(e.target.id)
     const filterProjectList = project.filter(p => p.id !== Number(e.target.id))
+    //console.log(filterProjectList)
+
     axios
-      .delete(`http://localhost:3001/project/${e.target.id}`)
+      .delete(`http://localhost:3001/api/projects/${e.target.id}`)
       .then(response => {
-        //console.log(response)
+        console.log(response)
         setProject(filterProjectList)
         setProjectTitle("")
         setFilterProject([])
@@ -155,9 +160,9 @@ const App = () => {
 
     if (!emptyField && !containsProject) {
       axios
-        .post("http://localhost:3001/project", newProject)
+        .post("http://localhost:3001/api/projects", newProject)
         .then(response => {
-          //console.log(response)
+          console.log(response)
           setProject(project.concat(response.data))
         })
     }
@@ -168,103 +173,27 @@ const App = () => {
   }
 
 
-
-
-
   return (
     <div className="whole-project">
 
       <div className="add-projects-container">
         <h1>Add Project</h1>
-        
-        <div className="add-elements">
-          <form onSubmit={addProjectName}>
-            <input
-              type="text"
-              placeholder="add a project"
-              className="task-adder"
-              onChange={handleProjectName}
-              value={projectName}
-
-            >
-            </input>
-            <button>Add</button>
-          </form>
-        </div>
-
-        <div className="project-list-display">
-
-          {project.map(p => {
-            return (
-              <div className="individual-project">
-                <label className="project-label" onClick={getIdAndTitle} id={p.id} key={p.id}>
-                  {p.projectName}
-                </label>
-                <button className="task-button" onClick={deleteProject} id={p.id}>Delete Project</button>
-              </div>
-            )
-          })}
-
-        </div>
-
+        <AddProject addProjectName={addProjectName} handleProjectName={handleProjectName} projectName={projectName} />
+        <ProjectDisplay getIdAndTitle={getIdAndTitle} deleteProject={deleteProject} project={project} />
       </div>
 
       <div className="todo-list">
         <h1>{projectTitle}</h1>
-        <div className="add-elements">
-          <form onSubmit={addTaskName}>
-            <input
-              id="add"
-              type="text"
-              placeholder="add a task to this project"
-              className="task-adder"
-              onChange={handleTaskName}
-              value={taskName}
-            >
 
-            </input>
-            <button>Add</button>
-          </form>
-          <p>You have {taskLength} things left to do!</p>
+        <div className="add-elements">
+          <AddTask addTaskName={addTaskName} handleTaskName={handleTaskName} taskName={taskName} />
+          <TaskLengthTitle taskLength={taskLength} />
         </div>
 
         <div className="todo-list-display">
           <TaskDisplay deleteTask={deleteTask} filterProject={filterProject} />
         </div>
       </div>
-    </div>
-  )
-}
-
-const TaskDisplay = ({ deleteTask, filterProject }) => {
-
-  let filteredKeys = []
-
-  if (filterProject.length !== 0) {
-    filteredKeys = Object.keys(filterProject[0]).filter(p => p !== "id" && p !== "projectName")
-    //console.log(filteredKeys)
-  }
-
-  if (filterProject.length !== 0) {
-    return (
-      <div>
-        {filteredKeys.map(a => {
-          return (
-            <div className="individual-todo" key={a}>
-              <label>{filterProject[0][a]}</label>
-              <br></br>
-              <button className="task-button" onClick={deleteTask} id={a}>Finished task</button>
-            </div>
-          )
-        })
-        }
-      </div>
-    )
-  }
-
-  return (
-    <div>
-
     </div>
   )
 }
