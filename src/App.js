@@ -5,7 +5,7 @@ import ProjectDisplay from "./components/ProjectDisplay"
 import TaskLengthTitle from "./components/TaskLengthTitle"
 import AddTask from "./components/AddTask"
 import TaskDisplay from "./components/TaskDisplay"
-import { getProject } from "./services/projects"
+import projectService from "./services/projects"
 
 
 const App = () => {
@@ -18,10 +18,8 @@ const App = () => {
   const [project, setProject] = useState([])
 
   const hook = () => {
-    //console.log('effect')
-    // axios
-    //   .get('http://localhost:3001/api/projects')
-    getProject()
+    projectService
+      .getProject()
       .then(response => {
         //console.log('promise fulfilled')
         setProject(response.data)
@@ -79,8 +77,8 @@ const App = () => {
       projectIdentify[0].projects.push({ task: taskName })
       //console.log(backToObject)
 
-      axios
-        .put(`http://localhost:3001/api/projects/${projectId}`, backToObject)
+      projectService
+        .modify(projectId, backToObject)
         .then(response => {
           //console.log(response)
           setTaskLength(projectIdentify[0].projects.length)
@@ -98,8 +96,8 @@ const App = () => {
     const remainingTasks = currentProject[0].projects.filter(p => p.task !== e.target.id)
     const currentIndex = project.findIndex(p => p.id === Number(projectId))
 
-    axios
-      .put(`http://localhost:3001/api/projects/${projectId}`, deleteObj)
+    projectService
+      .modify(projectId, deleteObj)
       .then(response => {
         //console.log(response)
         const tempArr = [...project]
@@ -115,8 +113,8 @@ const App = () => {
     const filterProjectList = project.filter(p => p.id !== Number(e.target.id))
     //console.log(filterProjectList)
 
-    axios
-      .delete(`http://localhost:3001/api/projects/${e.target.id}`)
+    projectService
+      .deleteProject(e.target.id)
       .then(response => {
         console.log(response)
         setProject(filterProjectList)
@@ -159,8 +157,8 @@ const App = () => {
     }
 
     if (!emptyField && !containsProject) {
-      axios
-        .post("http://localhost:3001/api/projects", newProject)
+      projectService
+        .postProject(newProject)
         .then(response => {
           console.log(response)
           setProject(project.concat(response.data))
