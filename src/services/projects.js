@@ -6,4 +6,16 @@ const getProject = () => {
     return axios.get(url)
 }
 
-export {getProject}
+const postProject = (project) => {
+    return axios.post(url, project)
+}
+
+const deleteProject = (number) => {
+    return axios.delete(`${url}/${number}`)
+}
+
+const modify = (number, object) => {
+    return axios.put(`${url}/${number}`, object)
+}
+
+export default { getProject, postProject, deleteProject, modify }
